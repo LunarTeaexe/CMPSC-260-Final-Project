@@ -1,0 +1,27 @@
+steps: 
+  # Build the frontend Docker image with build-time env var 
+  - name: 'gcr.io/cloud-builders/docker' 
+  args: [ 
+    'build', 
+    '--build-arg', 'VITE_API_URL=YOUR_BACKEND_DEPLOYMENT_URL_HERE', 
+    '-t', 'gcr.io/$PROJECT_ID/app-frontend', 
+    './frontend' 
+  ] 
+  
+  # Push the image to Container Registry 
+  - name: 'gcr.io/cloud-builders/docker' 
+  args: ['push', 'gcr.io/$PROJECT_ID/app-frontend'] 
+  
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud' 
+  args: [ 
+    'run', 'deploy', 'app-frontend', 
+    '--image', 'gcr.io/$PROJECT_ID/app-frontend', 
+    '--platform', 'managed', 
+    '--region', 'us-central1', 
+    '--allow-unauthenticated', 
+    '--port', '80' 
+  ] 
+
+options: 
+  logging: CLOUD_LOGGING_ONLY
