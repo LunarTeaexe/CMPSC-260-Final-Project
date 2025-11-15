@@ -3,7 +3,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker' 
   args: [ 
     'build', 
-    '--build-arg', 'VITE_API_URL=YOUR_BACKEND_DEPLOYMENT_URL_HERE', 
+    '--build-arg', 'VITE_API_URL= https://cmpsc-260-final-project-1049620773416.europe-west1.run.app', 
     '-t', 'gcr.io/$PROJECT_ID/app-frontend', 
     './frontend' 
   ] 
