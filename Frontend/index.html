@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Note Taking App</title>
+    <style>
+        :root{--font-size:18px}
+        html,body{height:100%;margin:0;font-family:ui-monospace, SFMono-Regular, Menlo, monospace;background:#0f1724;color:#e6edf3}
+        .toolbar{position:fixed;right:12px;top:12px;display:flex;gap:8px;z-index:20}
+        button{background:#122033;border:1px solid #243447;color:#cfe7ff;padding:6px 10px;border-radius:6px;cursor:pointer}
+        button:hover{background:#1a2e3c}
+        .editor{
+            box-sizing:border-box;
+            width:100%;
+            min-height:100vh;
+            padding:36px;
+            outline:none;
+            white-space:pre-wrap;
+            word-break:break-word;
+            font-size:var(--font-size);
+            line-height:1.4;
+            caret-color:#7ee3a2;
+            background:linear-gradient(180deg,#071025 0%, #071025 60%, #061123 100%);
+        }
+        .placeholder{position:absolute;left:36px;top:36px;color:#8193a5;pointer-events:none;user-select:none}
+        .container{position:relative;min-height:100vh}
+        .small{font-size:14px}
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button id="dec">A-</button>
+        <button id="inc">A+</button>
+        <button id="clear">Clear</button>
+        <button id="download">Download .txt</button>
+    </div>
+
+    <div class="container">
+        <div id="placeholder" class="placeholder">Click here and start typing...</div>
+        <div id="editor" class="editor" contenteditable="true" spellcheck="false" aria-label="typing area"></div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const placeholder = document.getElementById('placeholder');
+        const root = document.documentElement;
+
+        function updatePlaceholder() {
+            placeholder.style.display = editor.textContent.trim().length ? 'none' : 'block';
+        }
+
+        editor.addEventListener('input', updatePlaceholder);
+        editor.addEventListener('focus', updatePlaceholder);
+        editor.addEventListener('blur', updatePlaceholder);
+
+        // Focus when clicking placeholder or anywhere in container
+        placeholder.addEventListener('click', ()=>{ editor.focus(); });
+
+        // Font size controls
+        document.getElementById('inc').addEventListener('click', ()=>{
+            const cur = parseFloat(getComputedStyle(root).getPropertyValue('--font-size'));
+            root.style.setProperty('--font-size', (cur+2)+'px');
+        });
+        document.getElementById('dec').addEventListener('click', ()=>{
+            const cur = parseFloat(getComputedStyle(root).getPropertyValue('--font-size'));
+            root.style.setProperty('--font-size', Math.max(10, cur-2)+'px');
+        });
+
+        // Clear content
+        document.getElementById('clear').addEventListener('click', ()=>{
+            if(confirm('Clear the editor?')) { editor.innerText = ''; updatePlaceholder(); editor.focus(); }
+        });
+
+        // Download as .txt
+        document.getElementById('download').addEventListener('click', ()=>{
+            const text = editor.innerText;
+            const blob = new Blob([text], {type:'text/plain'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'notes.txt';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        });
+
+        // Shortcut: Ctrl/Cmd+S to download, Ctrl/Cmd+K to clear
+        window.addEventListener('keydown', (e)=>{
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s') {
+                e.preventDefault(); document.getElementById('download').click();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='k') {
+                e.preventDefault(); document.getElementById('clear').click();
+            }
+        });
+
+        // Auto-focus editor on load
+        window.addEventListener('load', ()=>{ editor.focus(); updatePlaceholder(); });
+    </script>
+</body>
+</html> `

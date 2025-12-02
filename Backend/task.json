@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "text": "Learn Docker containers",
+    "completed": false,
+    "createdAt": "2024-06-04T..."
+  },
+  {
+    "id": 2,
+    "text": "Build multi-service application", 
+    "completed": false,
+    "createdAt": "2024-06-04T..."
+  }
+]
