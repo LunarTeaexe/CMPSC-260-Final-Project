@@ -23,6 +23,7 @@
             caret-color:#7ee3a2;
             background:linear-gradient(180deg,#071025 0%, #071025 60%, #061123 100%);
         }
+        .editor img{max-width:100%;height:auto;margin:8px 0;border-radius:6px;display:block}
         .placeholder{position:absolute;left:36px;top:36px;color:#8193a5;pointer-events:none;user-select:none}
         .container{position:relative;min-height:100vh}
         .small{font-size:14px}
@@ -34,6 +35,8 @@
         <button id="inc">A+</button>
         <button id="clear">Clear</button>
         <button id="download">Download .txt</button>
+        <button id="add-image">Add Image</button>
+        <input type="file" id="image-input" accept="image/*" style="display:none;">
     </div>
 
     <div class="container">
@@ -81,6 +84,26 @@
             a.download = 'notes.txt';
             a.click();
             URL.revokeObjectURL(a.href);
+        });
+
+        // Add image
+        document.getElementById('add-image').addEventListener('click', ()=>{
+            document.getElementById('image-input').click();
+        });
+
+        document.getElementById('image-input').addEventListener('change', (e)=>{
+            const file = e.target.files[0];
+            if(file){
+                const reader = new FileReader();
+                reader.onload = (event)=>{
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    editor.appendChild(img);
+                    editor.appendChild(document.createElement('br'));
+                    editor.focus();
+                };
+                reader.readAsDataURL(file);
+            }
         });
 
         // Shortcut: Ctrl/Cmd+S to download, Ctrl/Cmd+K to clear
