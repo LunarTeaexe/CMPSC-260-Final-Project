@@ -31,6 +31,9 @@
         .placeholder{position:absolute;left:36px;top:36px;color:#8193a5;pointer-events:none;user-select:none}
         .container{position:relative;min-height:100vh}
         .small{font-size:14px}
+        .auth{position:fixed;left:12px;top:12px;display:flex;gap:8px;align-items:center;z-index:30}
+        .auth input{background:#0b1620;border:1px solid #243447;color:#cfe7ff;padding:6px;border-radius:6px}
+        .auth .user{color:#9fe7b1}
     </style>
 </head>
 <body>
@@ -42,6 +45,15 @@
         <button id="censor-toggle">Censor/Uncensor</button>
         <button id="add-image">Add Image</button>
         <input type="file" id="image-input" accept="image/*" style="display:none;">
+    </div>
+
+    <div class="auth" id="auth">
+        <input id="auth-username" placeholder="username" />
+        <input id="auth-password" type="password" placeholder="password" />
+        <button id="btn-login">Login</button>
+        <button id="btn-register">Register</button>
+        <span id="auth-user" class="user" style="display:none"></span>
+        <button id="btn-logout" style="display:none">Logout</button>
     </div>
 
     <div class="container">
@@ -211,6 +223,107 @@
 
         // Auto-focus editor on load
         window.addEventListener('load', ()=>{ editor.focus(); updatePlaceholder(); });
+
+        // --- Simple auth (register / login) ---
+        const API_ROOT = 'http://localhost:5000/api';
+        const tokenKey = 'auth_token';
+
+        function setAuthToken(token){
+            if(token) localStorage.setItem(tokenKey, token);
+            else localStorage.removeItem(tokenKey);
+        }
+
+        function getAuthToken(){ return localStorage.getItem(tokenKey); }
+
+        async function apiFetch(path, opts={}){
+            const headers = opts.headers || {};
+            const token = getAuthToken();
+            if(token) headers['Authorization'] = 'Bearer '+token;
+            const res = await fetch(API_ROOT+path, Object.assign({}, opts, { headers }));
+            return res;
+        }
+
+        async function updateAuthUI(){
+            const userSpan = document.getElementById('auth-user');
+            const logoutBtn = document.getElementById('btn-logout');
+            const loginBtn = document.getElementById('btn-login');
+            const registerBtn = document.getElementById('btn-register');
+            const usernameInput = document.getElementById('auth-username');
+            const passwordInput = document.getElementById('auth-password');
+            const token = getAuthToken();
+            if(!token){
+                userSpan.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                loginBtn.style.display = '';
+                registerBtn.style.display = '';
+                usernameInput.style.display = '';
+                passwordInput.style.display = '';
+                return;
+            }
+            try{
+                const r = await apiFetch('/me');
+                if(!r.ok) throw new Error('not ok');
+                const data = await r.json();
+                userSpan.textContent = 'Signed in: '+data.username;
+                userSpan.style.display = '';
+                logoutBtn.style.display = '';
+                loginBtn.style.display = 'none';
+                registerBtn.style.display = 'none';
+                usernameInput.style.display = 'none';
+                passwordInput.style.display = 'none';
+            }catch(e){
+                // invalid token
+                setAuthToken(null);
+                userSpan.style.display = 'none';
+                logoutBtn.style.display = 'none';
+                loginBtn.style.display = '';
+                registerBtn.style.display = '';
+                usernameInput.style.display = '';
+                passwordInput.style.display = '';
+            }
+        }
+
+        document.getElementById('btn-register').addEventListener('click', async ()=>{
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if(!username || !password) return alert('Enter username and password');
+            try{
+                const r = await fetch(API_ROOT+'/register', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await r.json();
+                if(!r.ok) return alert(data.error || 'Register failed');
+                setAuthToken(data.token);
+                await updateAuthUI();
+            }catch(err){ alert('Register failed'); }
+        });
+
+        document.getElementById('btn-login').addEventListener('click', async ()=>{
+            const username = document.getElementById('auth-username').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if(!username || !password) return alert('Enter username and password');
+            try{
+                const r = await fetch(API_ROOT+'/login', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await r.json();
+                if(!r.ok) return alert(data.error || 'Login failed');
+                setAuthToken(data.token);
+                await updateAuthUI();
+            }catch(err){ alert('Login failed'); }
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', ()=>{
+            setAuthToken(null);
+            updateAuthUI();
+        });
+
+        // initialize auth UI on load
+        window.addEventListener('load', ()=>{ updateAuthUI(); });
     </script>
 </body>
 </html> `
