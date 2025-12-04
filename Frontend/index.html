@@ -24,6 +24,10 @@
             background:linear-gradient(180deg,#071025 0%, #071025 60%, #061123 100%);
         }
         .editor img{max-width:100%;height:auto;margin:8px 0;border-radius:6px;display:block}
+        /* Censored appearance */
+        .censored{background:rgba(0,0,0,0.6);color:transparent;position:relative;border-radius:3px;padding:0 2px}
+        .censored::after{content:'████';color:#e6edf3;position:absolute;left:0;top:0;right:0;bottom:0;display:block;padding:0 2px;pointer-events:none}
+        .selected{outline:2px dashed rgba(126,227,162,0.6);outline-offset:4px}
         .placeholder{position:absolute;left:36px;top:36px;color:#8193a5;pointer-events:none;user-select:none}
         .container{position:relative;min-height:100vh}
         .small{font-size:14px}
@@ -35,6 +39,7 @@
         <button id="inc">A+</button>
         <button id="clear">Clear</button>
         <button id="download">Download .txt</button>
+        <button id="censor-toggle">Censor/Uncensor</button>
         <button id="add-image">Add Image</button>
         <input type="file" id="image-input" accept="image/*" style="display:none;">
     </div>
@@ -103,6 +108,94 @@
                     editor.focus();
                 };
                 reader.readAsDataURL(file);
+            }
+        });
+
+        // Censor / Uncensor selected text
+        let currentCensoredNode = null;
+
+        function clearCensorSelection(){
+            if(currentCensoredNode && currentCensoredNode.classList){
+                currentCensoredNode.classList.remove('selected');
+            }
+            currentCensoredNode = null;
+        }
+
+        function maskText(str){
+            // replace visible characters with block glyphs but keep whitespace
+            return str.replace(/\S/g, '█');
+        }
+
+        function censorSelection(){
+            const sel = window.getSelection();
+            if(!sel || !sel.rangeCount) return false;
+            const range = sel.getRangeAt(0);
+            if(range.collapsed) return false;
+            // Extract contents and serialize original HTML
+            const frag = range.extractContents();
+            const wrapper = document.createElement('div');
+            wrapper.appendChild(frag);
+            const originalHTML = wrapper.innerHTML;
+            const plain = wrapper.textContent || wrapper.innerText || '';
+
+            const span = document.createElement('span');
+            span.className = 'censored';
+            span.contentEditable = 'false';
+            span.dataset.original = originalHTML;
+            span.dataset.plain = plain;
+            // set masked visible text (keeps length/spacing roughly)
+            span.textContent = maskText(plain);
+            range.insertNode(span);
+            sel.removeAllRanges();
+            currentCensoredNode = span;
+            span.classList.add('selected');
+            return true;
+        }
+
+        function uncensorNode(node){
+            if(!node) return;
+            if(node.classList && node.classList.contains('censored')){
+                const parent = node.parentNode;
+                const tmp = document.createElement('div');
+                tmp.innerHTML = node.dataset.original || node.textContent;
+                // insert children in place
+                while(tmp.firstChild) parent.insertBefore(tmp.firstChild, node);
+                parent.removeChild(node);
+            }
+        }
+
+        // Click inside editor: select censored span if clicked
+        editor.addEventListener('click', (e)=>{
+            clearCensorSelection();
+            let t = e.target;
+            if(t && t.nodeType === Node.TEXT_NODE) t = t.parentElement;
+            if(t && t.classList && t.classList.contains('censored')){
+                currentCensoredNode = t;
+                t.classList.add('selected');
+            }
+        });
+
+        // Clicking outside clears selection
+        document.addEventListener('click', (e)=>{
+            if(!editor.contains(e.target) && !e.target.closest('.toolbar')) clearCensorSelection();
+        });
+
+        // Toolbar button: censor selection if any, otherwise uncensor selected node
+        document.getElementById('censor-toggle').addEventListener('click', ()=>{
+            const sel = window.getSelection();
+            if(sel && sel.rangeCount && !sel.getRangeAt(0).collapsed){
+                if(censorSelection()){ updatePlaceholder(); editor.focus(); return; }
+            }
+            if(currentCensoredNode){
+                uncensorNode(currentCensoredNode);
+                currentCensoredNode = null;
+            }
+        });
+
+        // Keyboard shortcut: Ctrl/Cmd+Shift+C to toggle censor
+        window.addEventListener('keydown', (e)=>{
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase()==='c'){
+                e.preventDefault(); document.getElementById('censor-toggle').click();
             }
         });
 
